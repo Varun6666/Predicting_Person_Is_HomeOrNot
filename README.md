@@ -1,104 +1,128 @@
-# Daytime Household Occupancy Prediction using Smart Grid Smart City (SGSC) Dataset
+# Daytime Household Occupancy Prediction using Smart Grid Smart City (SGSC) Dataset  
 
-## Objective
+## Problem Statement  
+Efficient energy management is central to modern smart grid initiatives. A critical driver of demand-side optimization is knowing **whether households are occupied during daytime hours**.  
 
-This project focuses on building a classification model to predict whether a household is occupied during daytime hours using the Smart Grid Smart City (SGSC) dataset. The primary goal is to support energy efficiency strategies in Australia by leveraging machine learning to forecast occupancy patterns and optimize energy distribution accordingly.
+Accurately predicting occupancy enables:  
+- **Improved demand-side management**: aligning energy supply with actual household demand.  
+- **Adaptive pricing schemes**: enabling flexible tariffs to encourage off-peak usage.  
+- **Reduced energy waste**: minimizing unnecessary distribution to empty homes.  
+- **Policy and infrastructure planning**: guiding government and utilities for sustainable grid operations.  
 
-## Problem Context
+This project applies **data mining and machine learning classification techniques** to forecast household occupancy during daytime hours in Australia using the publicly available SGSC dataset.  
 
-Accurately predicting daytime occupancy has practical implications for:
-- Improving demand-side energy management
-- Enabling adaptive pricing schemes
-- Reducing energy waste
-- Supporting policy decisions for grid operations and infrastructure
+---
 
-The project applies data mining and classification techniques to extract actionable insights from residential energy usage patterns and contextual metadata.
+## Dataset Information  
 
-## Dataset Access
+The dataset used is the **Smart Grid Smart City (SGSC) Customer Trial Data**, provided by the **Australian Government Open Data Portal**:  
+[Smart Grid Smart City Customer Trial Data](https://data.gov.au/data/dataset/smart-grid-smart-city-customer-trial-data)  
 
-The dataset used for this project is publicly available from the Australian Government Open Data Portal:
+### Metadata Overview  
+The SGSC dataset combines **demographics, tariffs, appliance ownership, and lifestyle/operational attributes**:  
+- **Identifiers**: `CUSTOMER_KEY`, trial participation (`TRIAL_CUSTOMER_TYPE`), control group flags.  
+- **Tariff and Technology Codes**: `TARIFF_PRODUCT_CD`, `FEEDBACK_TECH1_PRODUCT_CD`, `FEEDBACK_TECH2_PRODUCT_CD`.  
+- **Household & Regional Info**: `UNITTYPE`, `CLIMATEZONE`, number of residents.  
+- **Appliance Ownership**: `HAS_INTERNET_ACCESS`, `HAS_GAS_HEATING`, `HAS_POOLPUMP`, `HAS_AIRCON`, `HAS_GAS_COOKING`, `HAS_DRYER`.  
+- **Usage Attributes**: `GasUse`, `ElectricityUse`, `DryerUse` (ordinal).  
+- **Target Variable**: `IS_HOME_DURING_DAYTIME` (1 = occupied, 0 = unoccupied).  
 
-**Smart Grid Smart City (SGSC) Customer Trial Data**  
-Link: [https://data.gov.au/data/dataset/smart-grid-smart-city-customer-trial-data](https://data.gov.au/data/dataset/smart-grid-smart-city-customer-trial-data)
+This structured metadata allows machine learning models to connect household context and appliance usage to actual occupancy patterns.  
 
-This dataset includes daily electricity consumption data, appliance ownership, occupancy schedules, and household characteristics across multiple regions in Australia.
+---
 
-## Phase 1: Data Preprocessing and Feature Engineering
+## Phase 1: Data Preprocessing & Feature Engineering  
 
-### Dataset Overview
+### Cleaning & Transformation  
+1. **Dropping irrelevant fields**: identifiers (`CUSTOMER_KEY`), administrative dates (`SMART_METER_INSTALLATION_DATE`, `OPERATION_FINISH_DATE`), and static codes.  
+2. **Handling missing values**:  
+   - Numerical attributes imputed with **group-based medians** (e.g., grouped by `UnitType`).  
+   - Categorical attributes imputed with **mode** (most frequent).  
+3. **Encoding categorical variables**:  
+   - **Ordinal encoding** for ordered usage features (`GasUse`, `ElectricityUse`, `DryerUse`).  
+   - **One-Hot encoding** for nominal features (`ClimateZone`, `UnitType`, appliance flags).  
+4. **Standardization**: continuous variables standardized to improve distance-based models like KNN.  
 
-The SGSC dataset includes energy consumption readings along with household attributes such as appliance ownership, occupancy schedules, and regional identifiers.
+### Feature Selection  
+- Applied **ANOVA F-test (SelectKBest)** to rank features most correlated with occupancy.  
+- Applied **Random Forest feature importance** to capture nonlinear influence.  
+- Retained overlapping features from both methods (e.g., number of residents, appliance presence, climate zone).  
 
-### Cleaning and Transformation
+---
 
-- Irrelevant columns and constant values were removed.
-- Missing values were handled appropriately depending on the data type.
-- Categorical variables were encoded using a combination of label encoding and one-hot encoding.
-- All features were standardized for use in distance-based algorithms.
+## Phase 2: Model Development & Evaluation  
 
-### Feature Selection
+### Models Trained  
+- **Logistic Regression** (baseline)  
+- **K-Nearest Neighbors (KNN)**  
+- **Random Forest Classifier**  
+- **Neural Network (MLPClassifier)**  
 
-To isolate the most influential features, ANOVA F-test-based feature selection was applied using `SelectKBest`, which ranked and selected the top 10 features most correlated with the target class. These included variables related to time usage, number of residents, and appliance presence.
+### Hyperparameter Tuning  
+- Used **GridSearchCV** with **5-fold StratifiedKFold cross-validation**.  
+- Tuned parameters included:  
+  - KNN → neighbors, distance metric.  
+  - Random Forest → number of trees, max depth.  
+  - Neural Network → hidden layer sizes, activation, learning rate.  
 
-## Phase 2: Model Development and Evaluation
+### Evaluation Metrics  
+- Accuracy  
+- Precision, Recall, F1-score (per class)  
+- Confusion Matrix  
+- ROC Curve & AUC  
 
-### Models Trained
+---
 
-Multiple supervised learning models were implemented and compared, including:
-- Logistic Regression (baseline)
-- K-Nearest Neighbors (KNN)
-- Random Forest Classifier
-- Multi-Layer Perceptron (Neural Network)
+## Final Results  
 
-### Tuning and Validation
+### Random Forest (Best Model)  
+- **Accuracy**: 71%  
+- **ROC-AUC**: 0.78  
+- **Macro-F1**: 0.63, **Weighted-F1**: 0.69  
+- **Class 1 (Occupied)**: Precision 74%, Recall 88%, F1 = 0.81  
+- **Class 0 (Unoccupied)**: Precision 59%, Recall 37%, F1 = 0.46  
+- **Confusion Matrix**:  
+  - TP = 2,733  
+  - FN = 375  
+  - TN = 548  
+  - FP = 937  
 
-Each model was optimized using `GridSearchCV` with 5-fold `StratifiedKFold` cross-validation to ensure balanced performance evaluation. Parameter grids were defined to explore hyperparameter spaces such as:
-- Number of neighbors and distance metrics for KNN
-- Tree depth and number of estimators for Random Forest
-- Hidden layer sizes, learning rates, and activation functions for the neural network
+**Insight**: The model emphasizes detecting occupied homes (high recall for class 1), which is preferable for grid optimization where missing occupancy has higher costs than false alarms.  
 
-### Evaluation Metrics
+### Neural Network (MLP Classifier)  
+- **Accuracy**: 70%  
+- **ROC-AUC**: 0.77  
+- **Class 1 (Occupied)**: Recall = 91% (strong)  
+- **Class 0 (Unoccupied)**: Recall = 27% (weak)  
 
-The models were assessed using:
-- Accuracy
-- Precision, Recall, and F1-Score
-- Confusion Matrix
-- ROC Curve and AUC Score
+**Insight**: Neural Network captured nonlinear behavior but underperformed on class 0, limiting its balance.  
 
-These metrics provided a comprehensive understanding of each model’s performance, particularly in handling class imbalances.
+---
 
-## Final Results
+## Tools & Technologies  
+- **Programming**: Python 3.8+  
+- **Libraries**: pandas, numpy, scikit-learn, matplotlib, seaborn  
+- **Techniques**: Feature selection (ANOVA F-test, Random Forest importance), cross-validation, hyperparameter tuning  
+- **Visualization**: Confusion matrices, ROC curves, feature importance plots  
 
-The best-performing model was a tuned Neural Network (MLPClassifier), which achieved:
+---
 
-- Accuracy: 83%
-- High F1-score across both classes
-- Strong AUC values demonstrating robust discrimination capability
+## Key Achievements  
+Built a complete end-to-end **classification pipeline** for occupancy prediction.  
+Applied rigorous preprocessing, encoding, and hybrid feature selection.  
+Evaluated multiple models with **GridSearchCV + StratifiedKFold**.  
+Achieved strong results with **Random Forest (ROC-AUC 0.78)**, aligning with the project’s energy efficiency goals.  
 
-This model successfully captured complex nonlinear relationships and generalized well to unseen data, outperforming tree-based and linear models in this context.
+---
 
-## Tools and Libraries
+## Future Work  
+- Add **time-series features** for hourly-level predictions.  
+- Increase granularity to predict **hourly occupancy intervals**.  
+- Develop a **web interface** for stakeholders to query predictions dynamically.  
 
-- Python 3.8+
-- pandas, numpy for data manipulation
-- scikit-learn for modeling, feature selection, and evaluation
-- matplotlib, seaborn for visual analytics
+---
 
-## Key Achievements
-
-- Designed and implemented a full classification pipeline tailored for occupancy prediction.
-- Applied rigorous preprocessing and statistical feature selection to improve model interpretability.
-- Validated and tuned multiple machine learning models to identify the most effective approach.
-- Achieved a high-performing solution with 83% classification accuracy using a neural network model.
-
-## Future Work
-
-- Incorporate additional time-series features or temporal aggregation.
-- Extend the model to predict occupancy at finer hourly intervals.
-- Build a web-based interface for stakeholders to query occupancy predictions using live input data.
-
-## Author
-
-Varun Chandra Shekar  
+## Author  
+**Varun Chandra Shekar**  
 Master of Data Science, RMIT University  
-Melbourne, Australia
+Melbourne, Australia  
